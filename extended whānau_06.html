@@ -536,7 +536,7 @@
     const noiseOn = groupOn['Noise & jitter'];
     const cursorOn = groupOn['Cursor field'];
     const colorOn = groupOn['Colour'];
-    const tailsOn = groupOn['Tails'];
+    const tailsOn = groupOn['Trails'];
 
     // Constant slow anti-clockwise spin of the whole logo. `orig` is recomputed
     // as an absolute rotation of origBase (drift-free); pos/vel are rotated by
@@ -800,7 +800,7 @@
     { key: 'ENERGY_GAIN', label: 'Energy gain', min: 0, max: 2, step: 0.01,
       desc: 'How readily motion turns particles from white toward saturated colour.' },
 
-    { group: 'Tails' },
+    { group: 'Trails' },
     { key: 'TAIL_HISTORY', label: 'Tail history', min: 2, max: MAX_TAIL_HISTORY, step: 1, int: true,
       desc: 'Number of past positions kept per particle \u2014 the length of each trail.' },
     { key: 'TAIL_WIDTH', label: 'Tail width', min: 0, max: 5, step: 0.1,
@@ -823,9 +823,10 @@
 
   // Per-category On/Off state. The animation loop gates each category's effect
   // on these flags so a category can be muted without losing its slider values.
-  const TOGGLE_GROUPS = ['Motion', 'Rotation', 'Noise & jitter', 'Cursor field', 'Colour', 'Tails'];
+  const TOGGLE_GROUPS = ['Motion', 'Rotation', 'Noise & jitter', 'Cursor field', 'Colour', 'Trails'];
   const groupOn = {};
   TOGGLE_GROUPS.forEach(g => { groupOn[g] = true; });
+  groupOn['Trails'] = false; // Trails are off by default
   const groupSwitchEls = {};
 
   function fmt(v, step) {
@@ -863,6 +864,7 @@
           const cb = document.createElement('input');
           cb.type = 'checkbox';
           cb.checked = groupOn[c.group];
+          head.classList.toggle('off', !cb.checked);
           const track = document.createElement('span');
           track.className = 'track';
           const thumb = document.createElement('span');
