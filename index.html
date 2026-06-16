@@ -345,7 +345,7 @@
     TAIL_HISTORY: 12,     // number of past positions kept per particle
     TAIL_WIDTH: 1.4,      // half-width of the ribbon at the head (px)
     TAIL_ALPHA: 0.5,      // peak brightness at the head
-    TAIL_MIN_SPREAD: 1.2, // min head->tail distance (px) before a trail draws
+    TAIL_MIN_SPREAD: 0,   // min head->tail distance (px) before a trail draws; 0 = every moving particle trails
     // Render
     PARTICLE_SIZE: 1.5,   // on-screen size of each particle point
     FADE_OPACITY: 0.045   // per-frame fade of previous frame (lower = longer trails)
@@ -356,7 +356,10 @@
   const MAX_TAIL_HISTORY = 24;
   const MAX_TAIL_VERTS = MAX_TAIL_HISTORY * 2;        // 2 ribbon vertices per history point
   const MAX_TAIL_INDICES = (MAX_TAIL_HISTORY - 1) * 6; // 2 triangles per ribbon segment
-  const TAIL_MAX_ACTIVE = 9000; // cap on simultaneously drawn trails (perf guard)
+  // Upper bound on simultaneously drawn trails. Set to the real particle count
+  // once the logo is sampled (see img.onload) so every particle can carry a
+  // trail; the initial value only sizes nothing until then.
+  let TAIL_MAX_ACTIVE = 9000;
 
   let N = 0;
   let orig, origBase, pos, vel, seed;
@@ -416,6 +419,9 @@
     }
 
     N = pts.length / 3;
+    // Size the trail buffers for the full particle count so a trail can be
+    // drawn for every particle when Trails are on (no particles dropped).
+    TAIL_MAX_ACTIVE = N;
     orig = new Float32Array(pts);
     // Immutable copy of the un-rotated rest positions; `orig` is recomputed each
     // frame as a rotation of this so floating-point error never accumulates.
