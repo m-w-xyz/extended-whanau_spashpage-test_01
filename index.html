@@ -256,15 +256,51 @@
   });
   renderer.domElement.addEventListener('mouseleave', () => { mouseActive = false; });
 
-  window.addEventListener('resize', () => {
+  // Intrinsic art dimensions of the logo SVG. The logo is drawn to occupy ~65%
+  // of the smaller window axis, so it stays fully framed in any aspect ratio.
+  const LOGO_W = 572, LOGO_H = 595;
+  function computeLogoScale() {
+    return Math.min(
+      window.innerWidth * 0.65 / LOGO_W,
+      window.innerHeight * 0.65 / LOGO_H
+    );
+  }
+  // Current on-screen scale of the particle field. Kept so a resize can rescale
+  // the existing particles in place rather than re-sampling (which would change
+  // the particle count and reset all motion / colour / trail state).
+  let logoScale = 1;
+
+  function onResize() {
     camera.left = -window.innerWidth / 2;
     camera.right = window.innerWidth / 2;
     camera.top = window.innerHeight / 2;
     camera.bottom = -window.innerHeight / 2;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     fadeQuad.scale.set(window.innerWidth, window.innerHeight, 1);
-  });
+
+    // Seamlessly rescale the particle cloud so the logo keeps the same relative
+    // size and framing. Everything is centred on the origin, so a uniform scale
+    // about (0,0) preserves shape; scaling positions, velocities and path
+    // history by the same ratio means motion and trails carry through smoothly.
+    if (N > 0) {
+      const newScale = computeLogoScale();
+      const ratio = newScale / logoScale;
+      if (isFinite(ratio) && ratio > 0 && ratio !== 1) {
+        for (let i = 0; i < N; i++) {
+          const xi = i * 3, yi = xi + 1;
+          origBase[xi] *= ratio; origBase[yi] *= ratio;
+          pos[xi] *= ratio;      pos[yi] *= ratio;
+          vel[xi] *= ratio;      vel[yi] *= ratio;
+        }
+        const HN = N * MAX_TAIL_HISTORY;
+        for (let k = 0; k < HN; k++) { histX[k] *= ratio; histY[k] *= ratio; }
+        logoScale = newScale;
+      }
+    }
+  }
+  window.addEventListener('resize', onResize);
 
   // Sampling: screen-space spacing (px between particles) -> uniform density
   const SPACING = 1;
@@ -355,15 +391,13 @@
 
   const img = new Image();
   img.onload = () => {
-    const W = 572, H = 595;
+    const W = LOGO_W, H = LOGO_H;
 
-    // Render the SVG at its on-screen size so sampling density is uniform
-    const scale = Math.min(
-      window.innerWidth * 0.65 / W,
-      window.innerHeight * 0.65 / H
-    );
-    const dw = Math.round(W * scale);
-    const dh = Math.round(H * scale);
+    // Render the SVG at its on-screen size so sampling density is uniform.
+    // Record the scale so a later resize can rescale the field proportionally.
+    logoScale = computeLogoScale();
+    const dw = Math.round(W * logoScale);
+    const dh = Math.round(H * logoScale);
 
     const offscreen = document.createElement('canvas');
     offscreen.width = dw;
